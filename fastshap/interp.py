@@ -16,7 +16,7 @@ class ShapInterpretation():
     self.dls = learn.dls
     self.class_names = learn.dl.vocab if hasattr(learn.dl, 'vocab') else None # only defined for classification problems
     self.train_data = pd.merge(learn.dls.cats, learn.dls.conts, left_index=True, right_index=True)
-    self.test_data = _prepare_data(learn, test_data, n_samples)
+    self.test_data, self.test_data_og = _prepare_data(learn, test_data, n_samples)
     pred_func = partial(_predict, learn)
     self.explainer = shap.SamplingExplainer(pred_func, self.train_data, **kwargs)
     self.shap_vals = self.explainer.shap_values(self.test_data, l1_reg=l1_reg)
@@ -32,12 +32,17 @@ class ShapInterpretation():
     print(f'Displaying row {row_idx} of {n_rows} (use `row_idx` to specify another row)')
     return shap.decision_plot(exp_val, shap_vals[row_idx], self.test_data.iloc[row_idx], **kwargs)
 
-  def dependence_plot(self, variable_name:str="", class_id=0, **kwargs):
+  def dependence_plot(self, variable_name:str="", class_id=0, use_test_data_og = True, print_og = False, **kwargs):
     "Plots value of variable on the x-axis and the SHAP value of the same variable on the y-axis"
     if variable_name is "":
       raise ValueError('No variable passed in for `variable_name`')
     shap_vals, _ = _get_values(self, class_id)
-    return shap.dependence_plot(variable_name, shap_vals, self.test_data, **kwargs)
+    if use_test_data_og:
+#         kwargs["display_features"] = self.test_data_og
+        if print_og: print(self.test_data_og)
+        return shap.dependence_plot(variable_name, shap_vals, self.test_data, display_features = self.test_data_og, **kwargs)
+    else: return shap.dependence_plot(variable_name, shap_vals, self.test_data, **kwargs)
+
 
   def force_plot(self, class_id=0, matplotlib=False, **kwargs):
     "Visualize the `SHAP` values with additive force layout"
