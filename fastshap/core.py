@@ -10,6 +10,7 @@ def _prepare_data(learn:Learner, test_data=None, n_samples:int=128):
   "Prepares train and test data for `SHAP`, pass in a learner with optional data"
   no_user_provided_test_data = test_data is None
   if isinstance(test_data, pd.DataFrame):
+    test_data_og = test_data.copy()
     dl = learn.dls.test_dl(test_data)
   elif isinstance(test_data, TabDataLoader):
     dl = test_data
@@ -22,7 +23,19 @@ def _prepare_data(learn:Learner, test_data=None, n_samples:int=128):
   else:
     raise ValueError('Input is not supported. Please use either a `DataFrame` or `TabularDataLoader`')
   test_data = pd.merge(dl.cats, dl.conts, left_index=True, right_index=True)
-  return test_data.sample(n=n_samples) if ((len(test_data) > n_samples) and no_user_provided_test_data) else test_data
+
+  n_samples = min(n_samples, len(test_data))
+  idx =  np.sort(np.random.choice(np.array(test_data.index), size=n_samples, replace=False))
+  test_data = test_data.loc[idx]
+#   If we were passed a test_data dataframe, create test_data_cat, which has the original categorical values instead of codes
+  try:
+        test_data_cat = test_data.copy()
+        for c in test_data_og.columns:
+            if c in test_data_cat.columns:
+                test_data_cat[c] = test_data_og[c]
+  except NameError:
+    test_data_cat = None
+  return test_data, test_data_cat
 
 # Cell
 def _predict(learn:TabularLearner, data:np.array):
