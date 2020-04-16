@@ -16,7 +16,7 @@ class ShapInterpretation():
     self.dls = learn.dls
     self.class_names = learn.dl.vocab if hasattr(learn.dl, 'vocab') else None # only defined for classification problems
     self.train_data = pd.merge(learn.dls.cats, learn.dls.conts, left_index=True, right_index=True)
-    self.test_data, self.test_data_cat = _prepare_data(learn, test_data, n_samples)
+    self.test_data, self.test_data_cat, self.test_idx = _prepare_data(learn, test_data, n_samples)
     pred_func = partial(_predict, learn)
     self.explainer = shap.SamplingExplainer(pred_func, self.train_data, **kwargs)
     self.shap_vals = self.explainer.shap_values(self.test_data, l1_reg=l1_reg)

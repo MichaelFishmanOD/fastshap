@@ -24,7 +24,8 @@ def _prepare_data(learn:Learner, test_data=None, n_samples:int=128):
     raise ValueError('Input is not supported. Please use either a `DataFrame` or `TabularDataLoader`')
   test_data = pd.merge(dl.cats, dl.conts, left_index=True, right_index=True)
 
-  n_samples = min(n_samples, len(test_data))
+  if n_samples == -1 or n_samples > len(test_data):
+    n_samples = len(test_data)
   idx =  np.sort(np.random.choice(np.array(test_data.index), size=n_samples, replace=False))
   test_data = test_data.loc[idx]
 #   If we were passed a test_data dataframe, create test_data_cat, which has the original categorical values instead of codes
@@ -33,9 +34,12 @@ def _prepare_data(learn:Learner, test_data=None, n_samples:int=128):
         for c in test_data_og.columns:
             if c in test_data_cat.columns:
                 test_data_cat[c] = test_data_og[c]
+#         Replace np.nan's with strings so that this df can be passed to shap.dependence_plot() as features
+        obj_cols = test_data_cat.select_dtypes(include=["object"]).columns
+        test_data_cat[obj_cols] = test_data_cat[obj_cols].replace(np.nan,"NaN_str")
   except NameError:
     test_data_cat = None
-  return test_data, test_data_cat
+  return test_data, test_data_cat, idx
 
 # Cell
 def _predict(learn:TabularLearner, data:np.array):
